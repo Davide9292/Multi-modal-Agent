@@ -4,6 +4,8 @@ export default function DebugControls({ agentState, setAgentState, activeCard, s
         { key: 'badge', label: 'Badge' },
         { key: 'session', label: 'Session' },
         { key: 'network', label: 'Network' },
+        { key: 'events', label: 'Events' },
+        { key: 'map', label: 'Map' },
     ];
 
     return (

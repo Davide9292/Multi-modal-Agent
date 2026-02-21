@@ -6,6 +6,8 @@ import VoiceOrb from './components/VoiceOrb';
 import BadgeCard from './components/ToolCards/BadgeCard';
 import SessionCard from './components/ToolCards/SessionCard';
 import NetworkCard from './components/ToolCards/NetworkCard';
+import EventsCarousel from './components/ToolCards/EventsCarousel';
+import MapCard from './components/ToolCards/MapCard';
 import DebugControls from './components/DebugControls';
 
 const AGENT_ID = 'agent_0201khvn2rc3f1v8jt9a1pdbj8e0';
@@ -14,6 +16,8 @@ const toolCards = {
   badge: BadgeCard,
   session: SessionCard,
   network: NetworkCard,
+  events: EventsCarousel,
+  map: MapCard,
 };
 
 export default function App() {
@@ -28,6 +32,32 @@ export default function App() {
     onMessage: (message) => console.log('[Canvas] Message:', message),
     onError: (error) => console.error('[Canvas] Error:', error),
     onModeChange: ({ mode }) => console.log('[Canvas] Mode:', mode),
+
+    // Intercetta la chiamata ai tool (Client Tools) da parte di ElevenLabs
+    onClientCall: (toolCall) => {
+      console.log("[Canvas] Tool chiamato dall'AI:", toolCall.name);
+
+      switch (toolCall.name) {
+        case 'show_events':
+          setActiveCard('events');
+          break;
+        case 'show_map':
+          setActiveCard('map');
+          break;
+        case 'show_network':
+          setActiveCard('network');
+          break;
+        case 'show_badge':
+          setActiveCard('badge');
+          break;
+        case 'show_session':
+          setActiveCard('session');
+          break;
+        default:
+          setActiveCard(null);
+          break;
+      }
+    }
   });
 
   /* ── Derived agent state ── */
@@ -75,7 +105,7 @@ export default function App() {
   const ActiveCardComponent = activeCard ? toolCards[activeCard] : null;
 
   return (
-    <div className="flex flex-col items-center min-h-screen w-full">
+    <div className="flex flex-col items-center min-h-[100dvh] w-full pt-safe pb-safe overflow-hidden">
       <Header agentState={agentState} />
 
       {/* Central area – orb */}
@@ -86,7 +116,7 @@ export default function App() {
       />
 
       {/* Tool card overlay */}
-      <div className="w-full px-4 py-4 flex items-center justify-center min-h-[180px]">
+      <div className="w-full px-4 py-6 flex-1 flex items-center justify-center min-h-[220px]">
         <AnimatePresence mode="wait">
           {ActiveCardComponent && <ActiveCardComponent key={activeCard} />}
         </AnimatePresence>
