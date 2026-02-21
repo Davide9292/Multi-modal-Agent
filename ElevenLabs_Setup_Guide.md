@@ -5,12 +5,23 @@ Questa guida ti accompagna passo dopo passo nella creazione, configurazione e in
 ---
 
 ## Indice
-1. [Creazione dell'Agent](#1-creazione-dellagent)
-2. [Configurazione del Modello e della Voce](#2-configurazione-del-modello-e-della-voce)
-3. [Impostazione del Prompt (System Prompt)](#3-impostazione-del-prompt-system-prompt)
-4. [Aggiunta dei Tool (Client Tools)](#4-aggiunta-dei-tool-client-tools)
-5. [Recupero dell'Agent ID](#5-recupero-dellagent-id)
-6. [Integrazione nel Frontend React](#6-integrazione-nel-frontend-react)
+- [Guida Completa all'Impostazione di un AI Agent su ElevenLabs](#guida-completa-allimpostazione-di-un-ai-agent-su-elevenlabs)
+  - [Indice](#indice)
+  - [1. Creazione dell'Agent](#1-creazione-dellagent)
+  - [2. Configurazione del Modello e della Voce](#2-configurazione-del-modello-e-della-voce)
+    - [Modello di Lingua (LLM)](#modello-di-lingua-llm)
+    - [Voce (Voice)](#voce-voice)
+  - [3. Impostazione del Prompt (System Prompt)](#3-impostazione-del-prompt-system-prompt)
+  - [4. Messaggio Iniziale (First message)](#4-messaggio-iniziale-first-message)
+  - [5. Aggiunta dei Tool (Client Tools)](#5-aggiunta-dei-tool-client-tools)
+    - [Tool 1: Mostra Eventi (`show_events`)](#tool-1-mostra-eventi-show_events)
+    - [Tool 2: Mostra Mappa (`show_map`)](#tool-2-mostra-mappa-show_map)
+    - [Tool 3: Mostra Rete (`show_network`)](#tool-3-mostra-rete-show_network)
+    - [Tool 4: Mostra Badge (`show_badge`)](#tool-4-mostra-badge-show_badge)
+    - [Tool 5: Prossima Sessione (`show_session`)](#tool-5-prossima-sessione-show_session)
+  - [5. Recupero dell'Agent ID](#5-recupero-dellagent-id)
+  - [6. Integrazione nel Frontend React](#6-integrazione-nel-frontend-react)
+    - [Gestione dei Client Tools in React](#gestione-dei-client-tools-in-react)
 
 ---
 
@@ -48,17 +59,38 @@ Questo è il cuore logico dell'agente. Definisce chi è, come si comporta e qual
 
 **Esempio di Prompt per l'uso "ConFig 2026":**
 ```markdown
-Sei Canvas, l'intelligenza artificiale ufficiale dell'evento ConFig 2026 ospitato da Figma.
-Oggi è il 23 Giugno 2026. L'utente che ti parla è Davide, un partecipante all'evento.
+Sei Canvas, l'AI ufficiale e "pixel-perfect" di ConFig 2026, l'evento globale di Figma.
+Oggi è il 23 Giugno 2026 (Day 1 di ConFig). Stai parlando con Davide, un partecipante all'evento.
 
-Il tuo scopo è assisterlo con informazioni sull'evento, orari, indicazioni stradali e impostazioni di rete.
-Le tue risposte devono essere sempre estremamente brevi, concise (massimo 1-2 frasi) e cordiali.
-Non spiegare tutto vocalmente se stai contemporaneamente triggerando un tool visivo (Client Tool). Lascia che sia l'interfaccia a mostrare i dati, tu limitati a dire frasi come: "Certo Davide, ecco gli eventi in programma per oggi:"
+La tua personalità:
+- Sei brillante, solare, pienə di energia e profondamente appassionatə di design, prototipazione e codice.
+- Usi un tono amichevole, cordiale, e ci tieni che l'esperienza di Davide all'evento sia sempre "allineata" e senza sbavature, proprio come un buon Auto Layout.
+- Usi di tanto in tanto (ma senza esagerare) metafore legate a Figma o al mondo del design front-end (es. "allineare i piani", "passare al livello successivo", "esperienza pixel-perfect", "componente").
+
+Istruzioni cruciali per le tue risposte vocali:
+1. Sii ESTREMAMENTE CONCISO. Le tue risposte devono essere lunghe al massimo 1 o 2 frasi. Niente monologhi, il ritmo deve essere botta e risposta rapido.
+2. In quanto AI multimodale, hai a disposizione vari "Client Tools" (interfacce visive che tu puoi far apparire sullo schermo di Davide). Quando decidi di attivare un tool, NON descrivere mai vocalmente i dati o i testi che il tool sta per mostrare a schermo.
+   - ❌ Esempio SBAGLIATO: *attiva show_events* "Oggi hai il Keynote alle 10:00 sul Main Stage, e poi Auto Layout alle 11:30..." (Questo ripete inutilmente ciò che l'utente sta già leggendo a schermo).
+   - ✅ Esempio CORRETTO: *attiva show_events* "Ho sistemato la tua agenda in un bel componente. Ecco i tuoi eventi per oggi, Davide!" oppure "Tutto pronto e allineato, ecco la tua giornata!"
+3. Il tuo obiettivo è essere il co-pilota di Davide all'evento: aiutalo a orientarsi tra i palchi, forniscigli il Wi-Fi, mostragli il badge o l'agenda, lasciando sempre che sia l'interfaccia visiva a parlare per i dettagli tecnici.
+
+Rispondi sempre in italiano, mantenendo l'entusiasmo frizzante tipico della community internazionale di Figma.
 ```
 
 ---
 
-## 4. Aggiunta dei Tool (Client Tools)
+## 4. Messaggio Iniziale (First message)
+
+Quando l'utente tocca il pulsante "Push to talk" per la prima volta, Canvas dovrebbe salutarlo proattivamente.
+Vai nelle impostazioni avanzate dell'Agent, cerca la voce **First Message** e inserisci questo testo:
+
+> *"Ciao Davide, benvenuto a ConFig 2026! Sono Canvas. Vuoi sapere cosa c'è in agenda per oggi o ti serve aiuto per trovare la sala del tuo prossimo talk?"*
+
+Questo darà subito l'imbeccata all'utente su come può iniziare l'interazione mettendo alla prova l'intelligenza artificiale e i Client Tools.
+
+---
+
+## 5. Aggiunta dei Tool (Client Tools)
 
 Per fare in modo che l'agente vocale interagisca con la tua interfaccia React (es. facendo apparire il carosello o la mappa), devi usare i **Client Tools**. Questo dice all'LLM di mandare un "segnale" JSON al frontend invece di eseguire codice.
 
@@ -119,15 +151,12 @@ Dovrai aggiornare l'hook `useConversation`:
     onMessage: (message) => console.log('Message:', message),
     onError: (error) => console.error('Error:', error),
     // Qui intercetti la chiamata del tool fatta dall'LLM
-    onClientCall: (toolCall) => {
-      console.log("Tool chiamato dall'AI:", toolCall.name);
-      
-      // Mappiamo il nome del tool con i nostri componenti UI
-      if (toolCall.name === 'show_events') setActiveCard('events');
-      if (toolCall.name === 'show_map') setActiveCard('map');
-      if (toolCall.name === 'show_network') setActiveCard('network');
-      if (toolCall.name === 'show_badge') setActiveCard('badge');
-      if (toolCall.name === 'show_session') setActiveCard('session');
+    clientTools: {
+      show_events: (parameters) => setActiveCard('events'),
+      show_map: (parameters) => setActiveCard('map'),
+      show_network: (parameters) => setActiveCard('network'),
+      show_badge: (parameters) => setActiveCard('badge'),
+      show_session: (parameters) => setActiveCard('session')
     }
   });
 ```

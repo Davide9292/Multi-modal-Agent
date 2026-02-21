@@ -24,38 +24,43 @@ export default function App() {
   /* ── Debug override state ── */
   const [debugState, setDebugState] = useState(null);   // null = use live state
   const [activeCard, setActiveCard] = useState(null);
+  const [isPaused, setIsPaused] = useState(false);
 
   /* ── ElevenLabs Conversation ── */
   const conversation = useConversation({
     onConnect: () => console.log('[Canvas] Connected to agent'),
     onDisconnect: () => console.log('[Canvas] Disconnected'),
-    onMessage: (message) => console.log('[Canvas] Message:', message),
+    onMessage: (message) => {
+      console.log('[Canvas] Message:', message);
+      // Nascondiamo qualsiasi UI card aperta al momento in cui l'utente fa una nuova richiesta
+      if (message.source === 'user' || message.role === 'user') {
+        setActiveCard(null);
+      }
+    },
     onError: (error) => console.error('[Canvas] Error:', error),
     onModeChange: ({ mode }) => console.log('[Canvas] Mode:', mode),
 
     // Intercetta la chiamata ai tool (Client Tools) da parte di ElevenLabs
-    onClientCall: (toolCall) => {
-      console.log("[Canvas] Tool chiamato dall'AI:", toolCall.name);
-
-      switch (toolCall.name) {
-        case 'show_events':
-          setActiveCard('events');
-          break;
-        case 'show_map':
-          setActiveCard('map');
-          break;
-        case 'show_network':
-          setActiveCard('network');
-          break;
-        case 'show_badge':
-          setActiveCard('badge');
-          break;
-        case 'show_session':
-          setActiveCard('session');
-          break;
-        default:
-          setActiveCard(null);
-          break;
+    clientTools: {
+      show_events: (parameters) => {
+        console.log("[Canvas] Tool chiamato dall'AI: show_events", parameters);
+        setActiveCard('events');
+      },
+      show_map: (parameters) => {
+        console.log("[Canvas] Tool chiamato dall'AI: show_map", parameters);
+        setActiveCard('map');
+      },
+      show_network: (parameters) => {
+        console.log("[Canvas] Tool chiamato dall'AI: show_network", parameters);
+        setActiveCard('network');
+      },
+      show_badge: (parameters) => {
+        console.log("[Canvas] Tool chiamato dall'AI: show_badge", parameters);
+        setActiveCard('badge');
+      },
+      show_session: (parameters) => {
+        console.log("[Canvas] Tool chiamato dall'AI: show_session", parameters);
+        setActiveCard('session');
       }
     }
   });
@@ -71,9 +76,10 @@ export default function App() {
     return 'listening';
   }, [debugState, conversation.status, conversation.isSpeaking]);
 
-  /* ── Start / Stop conversation ── */
+  /* ── Start / Stop / Pause conversation ── */
   const handleStart = useCallback(async () => {
     try {
+      setIsPaused(false);
       await navigator.mediaDevices.getUserMedia({ audio: true });
       await conversation.startSession({
         agentId: AGENT_ID,
@@ -86,16 +92,31 @@ export default function App() {
 
   const handleStop = useCallback(() => {
     conversation.endSession();
+    setIsPaused(false);
   }, [conversation]);
+
+  const handleTogglePause = useCallback(async () => {
+    try {
+      const nextPaused = !isPaused;
+      setIsPaused(nextPaused);
+      if (conversation.setVolume) {
+        conversation.setVolume({ volume: nextPaused ? 0 : 1 });
+      }
+      // Depending on ElevenLabs SDK version, setInputMuted might exist
+      if (typeof conversation.setInputMuted === 'function') {
+        await conversation.setInputMuted(nextPaused);
+      }
+    } catch (err) {
+      console.error('[Canvas] Failed to toggle pause:', err);
+    }
+  }, [conversation, isPaused]);
 
   /* ── Orb interaction ── */
   const handleOrbTap = useCallback(() => {
-    if (conversation.status === 'connected') {
-      handleStop();
-    } else {
+    if (conversation.status !== 'connected') {
       handleStart();
     }
-  }, [conversation.status, handleStart, handleStop]);
+  }, [conversation.status, handleStart]);
 
   /* ── Debug controls wrapper (sets override or clears it) ── */
   const handleDebugStateChange = useCallback((state) => {
@@ -111,8 +132,11 @@ export default function App() {
       {/* Central area – orb */}
       <VoiceOrb
         agentState={agentState}
+        isPaused={isPaused}
         onPointerDown={handleOrbTap}
         onPointerUp={() => { }}
+        onStop={handleStop}
+        onTogglePause={handleTogglePause}
       />
 
       {/* Tool card overlay */}

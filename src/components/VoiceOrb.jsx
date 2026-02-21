@@ -13,6 +13,31 @@ function MicIcon({ className }) {
     );
 }
 
+function PauseIcon({ className }) {
+    return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <rect x="6" y="4" width="4" height="16" rx="1" />
+            <rect x="14" y="4" width="4" height="16" rx="1" />
+        </svg>
+    );
+}
+
+function PlayIcon({ className }) {
+    return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <polygon points="6 3 20 12 6 21 6 3" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+function StopIcon({ className }) {
+    return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <rect x="6" y="6" width="12" height="12" rx="2" ry="2" />
+        </svg>
+    );
+}
+
 /* ── Blob paths for speaking state ── */
 const blobPaths = [
     'M44,0 C68.3,0 88,19.7 88,44 C88,68.3 68.3,88 44,88 C19.7,88 0,68.3 0,44 C0,19.7 19.7,0 44,0 Z',
@@ -29,7 +54,7 @@ const figmaColors = [
     { color: '#FF7262', glow: 'rgba(255,114,98,0.4)' },
 ];
 
-export default function VoiceOrb({ agentState, onPointerDown, onPointerUp }) {
+export default function VoiceOrb({ agentState, isPaused, onPointerDown, onPointerUp, onStop, onTogglePause }) {
     const isIdle = agentState === 'idle';
     const isListening = agentState === 'listening';
     const isSpeaking = agentState === 'speaking';
@@ -110,12 +135,12 @@ export default function VoiceOrb({ agentState, onPointerDown, onPointerUp }) {
                 )}
             </AnimatePresence>
 
-            {/* Central button */}
-            <motion.button
+            {/* Central container */}
+            <motion.div
                 className={`
           relative z-10 w-36 h-36 sm:w-40 sm:h-40 rounded-full flex items-center justify-center
-          cursor-pointer select-none outline-none border-0
-          ${isIdle ? 'gradient-border' : ''}
+          select-none outline-none border-0
+          ${isIdle ? 'gradient-border cursor-pointer' : ''}
         `}
                 style={{
                     background: isListening
@@ -124,7 +149,7 @@ export default function VoiceOrb({ agentState, onPointerDown, onPointerUp }) {
                             ? 'radial-gradient(circle, rgba(42,42,42,0.8) 40%, rgba(30,30,30,0.6) 100%)'
                             : '#232323',
                 }}
-                whileTap={{ scale: 0.95 }}
+                whileTap={isIdle ? { scale: 0.95 } : {}}
                 animate={
                     isListening
                         ? {
@@ -139,23 +164,41 @@ export default function VoiceOrb({ agentState, onPointerDown, onPointerUp }) {
                             : { boxShadow: '0 0 0px 0px rgba(0,0,0,0)' }
                 }
                 transition={isListening ? { duration: 2, repeat: Infinity } : { duration: 0.5 }}
-                onPointerDown={onPointerDown}
-                onPointerUp={onPointerUp}
-                aria-label="Push to talk"
+                onPointerDown={isIdle ? onPointerDown : undefined}
+                onPointerUp={isIdle ? onPointerUp : undefined}
             >
-                <motion.div
-                    animate={isListening ? { scale: [1, 1.15, 1] } : { scale: 1 }}
-                    transition={isListening ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } : {}}
-                >
-                    <MicIcon
-                        className={`w-8 h-8 sm:w-9 sm:h-9 transition-colors duration-300 ${isListening
-                                ? 'text-figma-purple'
-                                : isSpeaking
-                                    ? 'text-figma-blue'
-                                    : 'text-secondary-text'
-                            }`}
-                    />
-                </motion.div>
+                {isIdle ? (
+                    <motion.div>
+                        <MicIcon
+                            className="w-8 h-8 sm:w-9 sm:h-9 text-secondary-text transition-colors duration-300"
+                        />
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        className="flex gap-4 sm:gap-5 items-center justify-center z-20"
+                        animate={isListening ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+                        transition={isListening ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } : {}}
+                    >
+                        {/* Pause Toggle */}
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onTogglePause(); }}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors cursor-pointer border border-white/10
+                                      ${isPaused ? 'bg-figma-purple/20 text-figma-purple border-figma-purple/30 shadow-[0_0_15px_rgba(162,89,255,0.3)]' : 'bg-white/5 hover:bg-white/10 text-primary-text'}`}
+                        >
+                            {isPaused ? <PlayIcon className="w-4 h-4 sm:w-5 sm:h-5 ml-1" /> : <PauseIcon className="w-4 h-4 sm:w-5 sm:h-5" />}
+                        </button>
+
+                        {/* Stop Action */}
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onStop(); }}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#1E1E1E] border border-figma-red/30 text-figma-red shadow-[0_0_15px_rgba(242,78,30,0.2)] hover:bg-figma-red/10 transition-colors flex items-center justify-center cursor-pointer"
+                        >
+                            <StopIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </button>
+                    </motion.div>
+                )}
 
                 {/* Inner label */}
                 <motion.span
@@ -164,7 +207,7 @@ export default function VoiceOrb({ agentState, onPointerDown, onPointerUp }) {
                 >
                     Push to talk
                 </motion.span>
-            </motion.button>
+            </motion.div>
         </div>
     );
 }
